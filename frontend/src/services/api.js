@@ -108,6 +108,7 @@ const api = {
 
   // ── RRHH: Nómina ──────────────────────────────────────────
   getNomina:      (mes)  => request("GET",  `/empleados/nomina/lista${mes ? `?mes=${mes}` : ""}`),
+  generarNomina:  ()     => request("POST", "/empleados/nomina/generar"),
   marcarNominaPagada: (id) => request("PUT", `/empleados/nomina/${id}/pagar`),
 
   // ── RRHH: Memorandos ──────────────────────────────────────

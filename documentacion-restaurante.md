@@ -22,7 +22,27 @@
 ---
 
 
+id | Rol            | Nombre              | Correo                              | Contraseña
+----|----------------|---------------------|-------------------------------------|--------------------------
+  1 | admin_punto    | Carlos Ramírez      | admin.principal@restaurante.com     | AdminPrincipal2026!
+  2 | mesero         | Andrea Moreno       | mesero.principal1@restaurante.com   | MeseroPrincipal1_2026!
+  3 | mesero         | Julián Castillo     | mesero.principal2@restaurante.com   | MeseroPrincipal2_2026!
+  4 | cocinero       | Paula Rojas         | cocinero.principal@restaurante.com  | CocineroPrincipal_2026!
+  5 | inversionista  | Fernando Silva      | inversionista1@restaurante.com      | InversionistaPrincipal2026!
 
+ 19 | super_admin    | Laura Méndez        | superadmin@restaurante.com          | SuperAdmin2026!
+ 20 | admin_general  | Santiago Gómez      | admin.general@restaurante.com       | AdminGeneral2026!
+ 21 | admin_punto    | Valentina Castro    | admin.norte@restaurante.com         | AdminPunto_Norte2026!
+ 22 | admin_punto    | Ricardo Ospina      | admin.medellin@restaurante.com      | AdminPunto_Med2026!
+ 23 | mesero         | Felipe Rodríguez    | mesero.norte1@restaurante.com       | Mesero_Norte1_2026!
+ 24 | mesero         | Juliana Herrera     | mesero.norte2@restaurante.com       | Mesero_Norte2_2026!
+ 25 | cocinero       | Miguel Vargas       | cocinero.norte@restaurante.com      | Cocinero_Norte_2026!
+ 26 | mesero         | Daniela Morales     | mesero.medellin@restaurante.com     | Mesero_Med_2026!
+ 27 | cocinero       | Sebastián Díaz      | cocinero.medellin@restaurante.com   | Cocinero_Med_2026!
+ 28 | inversionista  | Andrés Silva        | inversionista2@restaurante.com      | Inversionista2026!
+ 29 | cliente        | María Jose López    | maria1@gmail.com                    | 123456
+ 30 | cliente        | Camilo Restrepo     | camilo.r@hotmail.com                | Cliente_Camilo2026!
+ 31 | cliente        | Luisa Fernández     | luisa.f@gmail.com                   | Cliente_Luisa2026!
 
 
 ## Descripción General

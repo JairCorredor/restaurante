@@ -271,7 +271,10 @@ function TabEmpleados({ empleados, sedes = [], onRefresh }) {
 }
 
 // ── TAB: NÓMINA ───────────────────────────────────────────────────────
-function TabNomina({ nomina = [], onRefresh }) {
+function TabNomina({ nomina = [], onRefresh, empleados = [] }) {
+  const [generando, setGenerando] = useState(false);
+  const [modalConfirm, setModalConfirm] = useState(false);
+
   const pagar = async (id) => {
     try {
       await api.marcarNominaPagada(id);
@@ -279,29 +282,130 @@ function TabNomina({ nomina = [], onRefresh }) {
     } catch (error) { alert(error.message); }
   };
 
+  const generarNominaMes = async () => {
+    setModalConfirm(false);
+    setGenerando(true);
+    try {
+      const resultado = await api.generarNomina();
+      alert(`✅ ${resultado.mensaje}\nEmpleados: ${resultado.cantidad}\nMes: ${resultado.mes}/${resultado.año}`);
+      onRefresh && onRefresh();
+    } catch (error) { 
+      alert("Error: " + error.message);
+    } finally {
+      setGenerando(false);
+    }
+  };
+
+  // Calcular empleados activos de forma más robusta
+  const empleadosArray = Array.isArray(empleados) ? empleados : [];
+  const empleadosActivos = empleadosArray.filter(e => {
+    if (typeof e === 'object' && e !== null) {
+      return e.activo === 1 || e.activo === true;
+    }
+    return false;
+  }).length;
+
+  console.log("TabNomina - Empleados recibidos:", empleadosArray);
+  console.log("TabNomina - Empleados activos:", empleadosActivos);
+
+  const ahora = new Date();
+  const mesActual = String(ahora.getMonth() + 1).padStart(2, '0');
+  const mesNombre = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][ahora.getMonth()];
+  const año = ahora.getFullYear();
+
   return (
     <div>
-      <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, marginBottom: 20 }}>Nómina</h2>
-      {nomina.map((n) => (
-        <Card key={n.id_nomina} style={{ marginBottom: 12, padding: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <p style={{ fontWeight: 600, marginBottom: 6 }}>{n.empleado}</p>
-              <p style={{ fontSize: 13, color: C.muted, marginBottom: 6 }}>{n.cargo} • {n.sede}</p>
-              <p style={{ fontSize: 12, color: C.muted }}>{n.fecha_inicio} → {n.fecha_fin}</p>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <p style={{ fontWeight: 700, marginBottom: 8 }}>${Number(n.monto).toLocaleString("es-CO")}</p>
-              <Badge color={n.estado === "pagado" ? C.success : C.warning}>{n.estado}</Badge>
-              {n.estado === "pendiente" && (
-                <div style={{ marginTop: 10 }}>
-                  <Btn onClick={() => pagar(n.id_nomina)}>Marcar Pagada</Btn>
-                </div>
-              )}
-            </div>
-          </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22 }}>Nómina</h2>
+        <Btn onClick={() => setModalConfirm(true)} disabled={generando || empleadosArray.length === 0} style={{ fontSize: 12 }}>
+          {generando ? <Spinner size={12} /> : "💰"} Generar Nóminas del Mes
+        </Btn>
+      </div>
+      {nomina.length === 0 ? (
+        <Card style={{ padding: 28, textAlign: "center" }}>
+          <p style={{ color: C.muted, marginBottom: 12 }}>No hay nóminas aún. Genera las nóminas del mes actual.</p>
+          <Btn onClick={() => setModalConfirm(true)} disabled={generando}>
+            {generando ? <Spinner size={14} /> : "+"} Generar Nóminas
+          </Btn>
         </Card>
-      ))}
+      ) : (
+        nomina.map((n) => (
+          <Card key={n.id_nomina} style={{ marginBottom: 12, padding: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <p style={{ fontWeight: 600, marginBottom: 6 }}>{n.empleado}</p>
+                <p style={{ fontSize: 13, color: C.muted, marginBottom: 6 }}>{n.cargo} • {n.sede}</p>
+                <p style={{ fontSize: 12, color: C.muted }}>{n.fecha_inicio} → {n.fecha_fin}</p>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <p style={{ fontWeight: 700, marginBottom: 8 }}>${Number(n.monto).toLocaleString("es-CO")}</p>
+                <Badge color={n.estado === "pagado" ? C.success : C.warning}>{n.estado}</Badge>
+                {n.estado === "pendiente" && (
+                  <div style={{ marginTop: 10 }}>
+                    <Btn onClick={() => pagar(n.id_nomina)}>Marcar Pagada</Btn>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        ))
+      )}
+      
+      {/* Modal de Confirmación */}
+      {modalConfirm && (
+        <div style={{ position: "fixed", inset: 0, background: "#000a", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 28, width: "100%", maxWidth: 450, boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
+            <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: C.accent, marginBottom: 20 }}>Generar Nóminas</h3>
+            
+            {empleadosArray.length === 0 ? (
+              <>
+                <div style={{ background: C.danger + "22", border: `1px solid ${C.danger}44`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
+                  <p style={{ fontSize: 12, color: C.danger, marginBottom: 8 }}>⚠️ No se encontraron empleados</p>
+                  <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>No hay empleados cargados en el sistema. Verifica que existan empleados activos antes de generar nóminas.</p>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <Btn variant="ghost" onClick={() => setModalConfirm(false)} style={{ flex: 1 }}>Cerrar</Btn>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
+                  <p style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>DETALLES DE LA GENERACIÓN</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                    <div>
+                      <p style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Mes</p>
+                      <p style={{ fontSize: 14, fontWeight: 500, color: C.text }}>{mesNombre} {año}</p>
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Empleados Activos</p>
+                      <p style={{ fontSize: 14, fontWeight: 500, color: empleadosActivos > 0 ? C.success : C.warning }}>{empleadosActivos}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Rango de Fechas</p>
+                    <p style={{ fontSize: 13, color: C.text }}>01/{mesActual}/{año} — {new Date(año, ahora.getMonth() + 1, 0).getDate()}/{mesActual}/{año}</p>
+                  </div>
+                </div>
+
+                {empleadosActivos === 0 && (
+                  <div style={{ background: C.warning + "22", border: `1px solid ${C.warning}44`, borderRadius: 12, padding: 12, marginBottom: 20 }}>
+                    <p style={{ fontSize: 12, color: C.warning }}>⚠️ No hay empleados activos. Se crearán 0 nóminas.</p>
+                  </div>
+                )}
+
+                <p style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>Se generarán nóminas en estado <Badge color={C.warning}>pendiente</Badge> para cada empleado activo. Podrás marcarlas como pagadas después.</p>
+
+                <div style={{ display: "flex", gap: 10 }}>
+                  <Btn onClick={generarNominaMes} style={{ flex: 1 }} disabled={generando || empleadosActivos === 0}>
+                    {generando ? <Spinner size={12} /> : "✅"} Confirmar Generación
+                  </Btn>
+                  <Btn variant="ghost" onClick={() => setModalConfirm(false)} style={{ flex: 1 }} disabled={generando}>Cancelar</Btn>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -783,15 +887,27 @@ export default function AdminGeneralPage() {
     const cargarDatos = async () => {
       try {
         setLoading(true);
-        const [empleados, nomina, memorandos, seguridad, sedesData] = await Promise.all([
-          api.getEmpleados().catch(() => []),
-          api.getNomina().catch(() => []),
-          api.getMemorandos().catch(() => []),
-          api.getSeguridad().catch(() => []),
-          api.getSedes().catch(() => []),
+        
+        // Cargar empleados con manejo de error más explícito
+        let empleadosData = [];
+        try {
+          empleadosData = await api.getEmpleados();
+          console.log("✅ Empleados cargados:", empleadosData);
+        } catch (err) {
+          console.error("❌ Error cargando empleados:", err);
+          empleadosData = [];
+        }
+        
+        // Cargar otros datos
+        const [nomina, memorandos, seguridad, sedesData] = await Promise.all([
+          api.getNomina().catch(err => { console.error("Error getNomina:", err); return []; }),
+          api.getMemorandos().catch(err => { console.error("Error getMemorandos:", err); return []; }),
+          api.getSeguridad().catch(err => { console.error("Error getSeguridad:", err); return []; }),
+          api.getSedes().catch(err => { console.error("Error getSedes:", err); return []; }),
         ]);
+        
         setData({
-          empleados: Array.isArray(empleados) ? empleados : [],
+          empleados: Array.isArray(empleadosData) ? empleadosData : [],
           nomina: Array.isArray(nomina) ? nomina : [],
           memorandos: Array.isArray(memorandos) ? memorandos : [],
           seguridad: Array.isArray(seguridad) ? seguridad : [],
@@ -837,7 +953,7 @@ export default function AdminGeneralPage() {
                 onRefresh={() => api.getEmpleados().then(empleados => setData(prev => ({ ...prev, empleados })))} />
             )}
             {tab === "nomina" && (
-              <TabNomina nomina={data.nomina}
+              <TabNomina nomina={data.nomina} empleados={data.empleados}
                 onRefresh={() => api.getNomina().then(nomina => setData(prev => ({ ...prev, nomina })))} />
             )}
             {tab === "memorandos" && (

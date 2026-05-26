@@ -5,6 +5,7 @@ const {
   crearEmpleado,
   actualizarEmpleado,
   getNomina,
+  generarNominaDelMes,
   marcarNominaPagada,
   getMemorandos,
   crearMemorando,
@@ -20,12 +21,13 @@ const router = express.Router();
 router.use(verificarToken);
 
 // ── EMPLEADOS ──────────────────────────────────────────────────────────
-router.get("/", soloRoles("admin_general", "super_admin"), getEmpleados);
+router.get("/", soloRoles("admin_punto", "admin_general", "super_admin"), getEmpleados);
 router.post("/", soloRoles("admin_general", "super_admin"), crearEmpleado);
 router.put("/:id", soloRoles("admin_general", "super_admin"), actualizarEmpleado);
 
 // ── NÓMINA ─────────────────────────────────────────────────────────────
 router.get("/nomina/lista", soloRoles("admin_general", "super_admin"), getNomina);
+router.post("/nomina/generar", soloRoles("admin_general", "super_admin"), generarNominaDelMes);
 router.put("/nomina/:id/pagar", soloRoles("admin_general", "super_admin"), marcarNominaPagada);
 
 // ── MEMORANDOS ──────────────────────────────────────────────────────────

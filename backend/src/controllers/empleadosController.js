@@ -7,39 +7,41 @@ exports.getEmpleados = async (req, res) => {
   try {
     const conn = await db.getConnection();
     let query = `
-  SELECT 
-    e.id_empleado,
-    u.id_usuario,
-    u.nombres,
-    u.apellidos,
-    u.correo as email,
-    e.cargo,
-    e.salario,
-    e.activo,
-    e.id_sede,
-    s.nombre as sede
-  FROM empleados e
-  LEFT JOIN usuarios u ON e.id_usuario = u.id_usuario
-  LEFT JOIN sedes s ON e.id_sede = s.id_sede
-  WHERE 1=1
-`;
+      SELECT 
+        e.id_empleado,
+        u.id_usuario,
+        u.nombres,
+        u.apellidos,
+        u.correo as email,
+        e.cargo,
+        e.salario,
+        e.activo,
+        e.id_sede,
+        s.nombre as sede
+      FROM empleados e
+      LEFT JOIN usuarios u ON e.id_usuario = u.id_usuario
+      LEFT JOIN sedes s ON e.id_sede = s.id_sede
+      WHERE 1=1
+    `;
+    
+    const params = [];
     
     // Si no es super_admin, filtra por sede
-    if (
-  req.usuario.rol !== "super_admin" &&
-  req.usuario.id_sede
-) {
-  query += ` AND e.id_sede = ?`;
-}
+    if (req.usuario.rol !== "super_admin" && req.usuario.id_sede) {
+      query += ` AND e.id_sede = ?`;
+      params.push(req.usuario.id_sede);
+    }
     
     query += ` ORDER BY u.nombres ASC`;
     
-    const params = req.usuario.rol !== "super_admin" ? [req.usuario.id_sede] : [];
-
+    console.log("Query empleados:", query);
+    console.log("Params:", params);
+    console.log("Usuario:", req.usuario);
 
     const [empleados] = await conn.execute(query, params);
     conn.release();
 
+    console.log("Empleados encontrados:", empleados.length);
     res.json(empleados);
   } catch (error) {
     console.error("Error getEmpleados:", error);
@@ -352,6 +354,126 @@ exports.marcarNominaPagada = async (req, res) => {
     res.status(500).json({
       error: error.message
     });
+  }
+};
+
+exports.generarNominaDelMes = async (req, res) => {
+  try {
+    const conn = await db.getConnection();
+
+    // Obtener mes y año actual
+    const ahora = new Date();
+    const mes_actual = String(ahora.getMonth() + 1).padStart(2, '0');
+    const año_actual = ahora.getFullYear();
+    const fecha_inicio = `${año_actual}-${mes_actual}-01`;
+    const fecha_fin = new Date(año_actual, ahora.getMonth() + 1, 0).toISOString().split('T')[0];
+
+    console.log("📋 Generando nóminas para:", { mes: mes_actual, año: año_actual, usuario: req.usuario.rol });
+
+    // Obtener empleados activos
+    let queryEmpleados = `
+      SELECT 
+        e.id_empleado,
+        e.salario,
+        e.id_sede,
+        u.nombres,
+        u.apellidos
+      FROM empleados e
+      JOIN usuarios u ON e.id_usuario = u.id_usuario
+      WHERE e.activo = 1
+    `;
+    
+    const paramsEmpleados = [];
+    
+    // Solo admin_punto se filtra por sede
+if (req.usuario.rol === "admin_punto") {
+  queryEmpleados += ` AND e.id_sede = ?`;
+  paramsEmpleados.push(req.usuario.id_sede);
+}
+
+    const [empleados] = await conn.execute(queryEmpleados, paramsEmpleados);
+    console.log("👥 Empleados encontrados:", empleados.length);
+
+    if (empleados.length === 0) {
+      conn.release();
+      console.warn("⚠️ No hay empleados activos para generar nómina");
+      return res.status(400).json({ error: "No hay empleados activos para generar nómina" });
+    }
+
+    // Generar nóminas para cada empleado
+let nominasCreadas = 0;
+let nominasOmitidas = 0;
+
+for (const empleado of empleados) {
+
+  // Verificar si ya existe nómina del empleado este mes
+  const [existe] = await conn.execute(`
+    SELECT COUNT(*) as cantidad
+    FROM nomina
+    WHERE id_empleado = ?
+    AND YEAR(fecha_inicio) = ?
+    AND MONTH(fecha_inicio) = ?
+  `, [
+    empleado.id_empleado,
+    año_actual,
+    parseInt(mes_actual)
+  ]);
+
+  // Si ya existe, omitir
+  if (existe[0].cantidad > 0) {
+    console.warn(`⚠️ Nómina ya existe para ${empleado.nombres}`);
+    nominasOmitidas++;
+    continue;
+  }
+
+  try {
+    
+    await conn.execute(`
+      INSERT INTO nomina (
+        id_empleado,
+        fecha_inicio,
+        fecha_fin,
+        monto,
+        estado
+      )
+      VALUES (?, ?, ?, ?, 'pendiente')
+    `, [
+      empleado.id_empleado,
+      fecha_inicio,
+      fecha_fin,
+      empleado.salario
+    ]);
+
+    nominasCreadas++;
+
+    console.log(
+      `✓ Nómina creada para empleado ${empleado.id_empleado}`
+    );
+
+    
+
+  } catch (err) {
+
+    console.error("ERROR SQL COMPLETO:");
+    console.error(err);
+    console.error(
+      `✗ Error creando nómina para ${empleado.nombres}:`,
+      err.message
+    );
+
+    throw err;
+  }
+  
+}
+  } catch (error) {
+    console.error("❌ Error generarNominaDelMes:", error.message);
+    console.error(error);
+
+res.status(500).json({
+  error: error.message,
+  sqlMessage: error.sqlMessage,
+  code: error.code
+});
   }
 };
 
