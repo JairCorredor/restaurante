@@ -25,23 +25,42 @@ function serializeDetalleObservacion(nota, ingredientes_excluir = []) {
   return `${cleanNota}${cleanNota ? " " : ""}${DETALLE_EXCLUSION_TOKEN}${payload}`;
 }
 
+function extractIngredientesExcluir(item) {
+  if (Array.isArray(item.ingredientes_excluir) && item.ingredientes_excluir.length > 0) {
+    return item.ingredientes_excluir;
+  }
+  if (item.observacion) {
+    return parseDetalleObservacion(item.observacion).ingredientes_excluir;
+  }
+  return [];
+}
+
 // GET /api/pedidos
 async function getPedidos(req, res) {
-  const id_sede = req.usuario.id_sede;
+  const id_sede = req.usuario?.id_sede;
+  const esSuperAdmin = req.usuario?.rol === "super_admin";
+  
   try {
-    const [pedidos] = await db.query(
-      `SELECT p.id_pedido, p.id_mesa, p.estado, p.observacion, p.creado_en,
+    let query = `SELECT p.id_pedido, p.id_mesa, p.id_sede, p.estado, p.observacion, p.creado_en,
               m.numero AS mesa_numero,
-              u.nombres AS mesero_nombre
+              u.nombres AS mesero_nombre,
+              s.nombre AS sede_nombre
        FROM pedidos p
        JOIN mesas m ON m.id_mesa = p.id_mesa
-       JOIN empleados e ON e.id_empleado = p.id_mesero
-       JOIN usuarios u ON u.id_usuario = e.id_usuario
-       WHERE p.id_sede = ?
-         AND p.estado NOT IN ('entregado','cancelado')
-       ORDER BY p.creado_en ASC`,
-      [id_sede]
-    );
+       LEFT JOIN empleados e ON e.id_empleado = p.id_mesero
+       LEFT JOIN usuarios u ON u.id_usuario = e.id_usuario
+       LEFT JOIN sedes s ON s.id_sede = p.id_sede
+       WHERE 1=1`;
+    
+    let params = [];
+    if (!esSuperAdmin && id_sede) {
+      query += ` AND p.id_sede = ?`;
+      params = [id_sede];
+    }
+    
+    query += ` ORDER BY p.creado_en DESC LIMIT 100`;
+    
+    const [pedidos] = await db.query(query, params);
 
     for (const pedido of pedidos) {
       const [detalle] = await db.query(
@@ -59,13 +78,29 @@ async function getPedidos(req, res) {
           ...d,
           observacion: parsed.nota,
           ingredientes_excluir: parsed.ingredientes_excluir,
+          ingredientes_excluir_nombres: [],
         };
       });
+
+      // Si hay exclusiones, obtener los nombres para cada ingrediente excluido
+      for (const it of pedido.items) {
+        if (it.ingredientes_excluir && it.ingredientes_excluir.length > 0) {
+          const ids = it.ingredientes_excluir.map(id => Number(id)).filter(Boolean);
+          if (ids.length > 0) {
+            const placeholders = ids.map(() => "?").join(",");
+            const [prodRows] = await db.query(
+              `SELECT id_producto, nombre FROM productos_inventario WHERE id_producto IN (${placeholders})`,
+              ids
+            );
+            it.ingredientes_excluir_nombres = prodRows.map(r => r.nombre);
+          }
+        }
+      }
     }
 
-    return res.json(pedidos);
+    return res.json(pedidos || []);
   } catch (err) {
-    console.error(err);
+    console.error("Error en getPedidos:", err);
     return res.status(500).json({ error: "Error al obtener pedidos" });
   }
 }
@@ -74,7 +109,7 @@ async function validarInventarioParaPedido(conn, items) {
   const requerimientos = new Map();
 
   for (const item of items) {
-    const exclude = new Set(Array.isArray(item.ingredientes_excluir) ? item.ingredientes_excluir : []);
+    const exclude = new Set(extractIngredientesExcluir(item));
     const [ingredientes] = await conn.query(
       `SELECT ri.id_producto, ri.cantidad_requerida, pi.nombre
        FROM receta_ingredientes ri
@@ -282,7 +317,7 @@ async function actualizarEstado(req, res) {
 
     if (estado === "en_preparacion") {
       const [items] = await conn.query(
-        "SELECT id_plato, cantidad FROM pedido_detalle WHERE id_pedido = ?",
+        "SELECT id_plato, cantidad, observacion FROM pedido_detalle WHERE id_pedido = ?",
         [id]
       );
       await validarInventarioParaPedido(conn, items);

@@ -21,6 +21,10 @@
 
 ---
 
+
+
+
+
 ## Descripción General
 
 Sistema web para la gestión integral de un restaurante con múltiples sedes. Permite administrar mesas, pedidos, menú, inventario, reservas, facturación y usuarios, con acceso diferenciado según el rol de cada persona.

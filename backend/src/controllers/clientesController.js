@@ -170,4 +170,22 @@ async function actualizarPerfilCliente(req, res) {
   }
 }
 
-module.exports = { getPerfilCliente, actualizarPerfilCliente, getIdCliente };
+// GET /api/clientes - lista todos los clientes (solo admin_general, super_admin)
+async function getClientes(req, res) {
+  try {
+    const [rows] = await db.query(
+      `SELECT id_cliente, nombres, apellidos, correo, telefono, cedula,
+              fecha_nacimiento, creado_en,
+              CASE WHEN id_usuario IS NOT NULL THEN 1 ELSE 0 END AS activo
+       FROM clientes
+       ORDER BY nombres
+       LIMIT 100`
+    );
+    return res.json(rows || []);
+  } catch (err) {
+    console.error("Error en getClientes:", err);
+    return res.status(500).json({ error: "Error al obtener clientes" });
+  }
+}
+
+module.exports = { getPerfilCliente, actualizarPerfilCliente, getIdCliente, getClientes };

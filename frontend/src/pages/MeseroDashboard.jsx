@@ -258,6 +258,11 @@ function TabMesas({ mesas, pedidos, cargando }) {
                 <div>
                   <div style={{ fontSize: 14 }}>{it.cantidad}× {it.plato_nombre}</div>
                   {it.observacion && <div style={{ fontSize: 11, color: C.muted }}>↳ {it.observacion}</div>}
+                  {it.ingredientes_excluir && it.ingredientes_excluir.length > 0 && (
+                    <div style={{ fontSize: 11, color: C.info, marginTop: 6 }}>
+                      ✖ Ingredientes excluidos: {it.ingredientes_excluir_nombres?.length ? it.ingredientes_excluir_nombres.join(", ") : it.ingredientes_excluir.join(", ")}
+                    </div>
+                  )}
                   {it.alergias_texto && <div style={{ fontSize: 11, color: C.danger }}>⚠ {it.alergias_texto}</div>}
                 </div>
                 <span style={{ color: C.accent, fontSize: 14 }}>
@@ -474,6 +479,18 @@ function TabPedido({ mesas, menu, onPedidoCreado }) {
                           <span style={{ color: C.accent, fontSize: 12, marginTop: 8, display: "block" }}>
                             ${p.precio.toLocaleString()}
                           </span>
+                          <button onClick={(e) => { e.stopPropagation(); abrirReceta(p.id_plato); }} style={{
+                            marginTop: 10,
+                            background: "transparent",
+                            color: C.info,
+                            border: `1px solid ${C.info}44`,
+                            borderRadius: 8,
+                            padding: "6px 10px",
+                            fontSize: 11,
+                            cursor: "pointer",
+                          }}>
+                            Ver receta
+                          </button>
                         </div>
                       </div>
                     </Card>
@@ -598,6 +615,14 @@ function TabPedido({ mesas, menu, onPedidoCreado }) {
                   onChange={e => setObs(p => ({ ...p, [it.id_plato]: e.target.value }))}
                   style={{ marginTop: 6, padding: "5px 10px", fontSize: 11 }}
                 />
+                {/* Mostrar nombres de ingredientes excluidos en el resumen previo al envío */}
+                {it.ingredientes_excluir && it.ingredientes_excluir.length > 0 && (
+                  <div style={{ fontSize: 12, color: C.info, marginTop: 8 }}>
+                    ✖ Ingredientes excluidos: {recetasCache[it.id_plato]
+                      ? recetasCache[it.id_plato].ingredientes.filter(ing => (it.ingredientes_excluir || []).includes(ing.id_producto)).map(ing => ing.ingrediente).join(", ")
+                      : it.ingredientes_excluir.join(", ")}
+                  </div>
+                )}
               </div>
             ))
           }

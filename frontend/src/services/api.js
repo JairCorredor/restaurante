@@ -33,6 +33,7 @@ const api = {
 
   // ── Sedes ─────────────────────────────────────────────────
   getSedes: ()                 => request("GET", "/sedes"),
+  crearSede: (data)            => request("POST", "/sedes", data),
 
   // ── Mesas ─────────────────────────────────────────────────
   getMesas:        (id_sede)    => request("GET",  id_sede ? `/mesas?id_sede=${id_sede}` : "/mesas"),
@@ -73,9 +74,11 @@ const api = {
   toggleActivo: (id, activo) => request("PUT", `/usuarios/${id}/activo`, { activo }),
 
   // ── Clientes ──────────────────────────────────────────────
+  getClientes:                 ()     => request("GET", "/clientes"),
   getPerfilCliente:        ()     => request("GET", "/clientes/perfil"),
   actualizarPerfilCliente: (data) => request("PUT", "/clientes/perfil", data),
   getMisReservas:          ()     => request("GET", "/reservas/mis-reservas"),
+  getMisPedidos: () => request("GET", "/pedidos/mis-pedidos"),
   
   // ── Alergias ──────────────────────────────────────────────
   getAlergias:           ()      => request("GET", "/alergias"),
@@ -97,6 +100,32 @@ const api = {
   getInversionistas:         ()         => request("GET", "/inversionistas"),
   asignarSede: (data)                   => request("POST", "/inversionistas", data),
   quitarSede:  (id_usuario, id_sede)    => request("DELETE", `/inversionistas/${id_usuario}/sede/${id_sede}`),
+
+  // ── RRHH: Empleados ───────────────────────────────────────
+  getEmpleados:   ()     => request("GET",  "/empleados"),
+  crearEmpleado:  (data) => request("POST", "/empleados", data),
+  actualizarEmpleado: (id, data) => request("PUT", `/empleados/${id}`, data),
+
+  // ── RRHH: Nómina ──────────────────────────────────────────
+  getNomina:      (mes)  => request("GET",  `/empleados/nomina/lista${mes ? `?mes=${mes}` : ""}`),
+  marcarNominaPagada: (id) => request("PUT", `/empleados/nomina/${id}/pagar`),
+
+  // ── RRHH: Memorandos ──────────────────────────────────────
+  getMemorandos:  ()     => request("GET",  "/empleados/memorandos/lista"),
+  crearMemorando: (data) => request("POST", "/empleados/memorandos", data),
+
+  // ── RRHH: Control de Seguridad ────────────────────────────
+  getSeguridad:   ()     => request("GET",  "/empleados/seguridad/lista"),
+  crearControlSeguridad: (data) => request("POST", "/empleados/seguridad", data),
+
+  // ── RRHH: Asistencia ──────────────────────────────────────
+  getAsistencia:  (fecha, id_sede) => {
+    const q = new URLSearchParams();
+    if (fecha) q.append("fecha", fecha);
+    if (id_sede) q.append("id_sede", id_sede);
+    return request("GET", `/empleados/asistencia/lista${q.toString() ? `?${q.toString()}` : ""}`);
+  },
+  registrarAsistencia: (data) => request("POST", "/empleados/asistencia", data),
 };
 
 export default api;

@@ -301,6 +301,11 @@ function TabCola({ pedidos, onAvanzar, cargando }) {
                       {it.observacion && (
                         <span style={{ fontSize: 11, color: C.muted, marginLeft: 8 }}>— {it.observacion}</span>
                       )}
+                            {it.ingredientes_excluir && it.ingredientes_excluir.length > 0 && (
+                              <div style={{ fontSize: 11, color: C.info, marginTop: 6 }}>
+                                ✖ Excluye: {it.ingredientes_excluir_nombres?.length ? it.ingredientes_excluir_nombres.join(", ") : it.ingredientes_excluir.join(", ")}
+                              </div>
+                            )}
                       {it.alergias_texto && (
                         <span style={{ fontSize: 11, color: C.danger, marginLeft: 8 }}>⚠ {it.alergias_texto}</span>
                       )}

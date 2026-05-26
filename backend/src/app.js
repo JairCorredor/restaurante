@@ -26,6 +26,7 @@ app.use("/api/alergias",   require("./routes/alergias"));
 app.use("/api/encuestas",  require("./routes/encuestas"));
 app.use("/api/resenas",    require("./routes/resenas"));
 app.use("/api/inversionistas", require("./routes/inversionistas"));
+app.use("/api/empleados",  require("./routes/empleados"));
 
 // ── Health check ──────────────────────────────────────────────
 app.get("/api/health", (req, res) => res.json({ ok: true }));
