@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth, usePuede } from "../context/AuthContext";
 import api from "../services/api";
 import TabReservas from "../components/shared/TabReservas";
 
@@ -541,14 +541,90 @@ function TabFacturacion({ pedidos, facturas, onRefresh }) {
 }
 
 // ── TAB: MENÚ ─────────────────────────────────────────────────────────
-function TabMenu({ menu, onRefresh }) {
+function TabMenu({ menu, onRefresh, idSede }) {
+  const puede = usePuede();
+  const puedeGestionar = puede("crearMenu");
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState({ id_plato: null, nombre: "", descripcion: "", precio: "", disponible: true, imagen_url: "" });
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+
   const cats = [...new Set(menu.map(p => p.menu_nombre))];
+
+  const abrirNuevo = () => {
+    setForm({ id_plato: null, nombre: "", descripcion: "", precio: "", disponible: true, imagen_url: "" });
+    setError("");
+    setModal(true);
+  };
+
+  const abrirEditar = (plato) => {
+    setForm({
+      id_plato: plato.id_plato,
+      nombre: plato.nombre || "",
+      descripcion: plato.descripcion || "",
+      precio: String(plato.precio || ""),
+      disponible: !!plato.disponible,
+      imagen_url: plato.imagen_url || "",
+    });
+    setError("");
+    setModal(true);
+  };
+
+  const guardar = async () => {
+    if (!form.nombre.trim()) {
+      setError("El nombre es obligatorio");
+      return;
+    }
+    if (form.precio === "" || isNaN(Number(form.precio)) || Number(form.precio) < 0) {
+      setError("Precio válido requerido");
+      return;
+    }
+
+    setGuardando(true);
+    setError("");
+    try {
+      const payload = {
+        nombre: form.nombre.trim(),
+        descripcion: form.descripcion.trim() || null,
+        precio: Number(form.precio),
+        disponible: form.disponible ? 1 : 0,
+        imagen_url: form.imagen_url.trim() || null,
+      };
+      if (idSede) payload.id_sede = Number(idSede);
+
+      if (form.id_plato) {
+        await api.actualizarMenu(form.id_plato, payload);
+      } else {
+        await api.crearMenu(payload);
+      }
+      setModal(false);
+      onRefresh();
+    } catch (err) {
+      setError(err.message || "Error guardando plato");
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const eliminar = async (id) => {
+    if (!window.confirm("¿Eliminar este plato del menú?")) return;
+    try {
+      await api.eliminarMenu(id);
+      onRefresh();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Error eliminando plato");
+    }
+  };
 
   return (
     <div className="fade">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22 }}>Menú activo</h2>
-        <Btn variant="ghost" onClick={onRefresh} style={{ fontSize: 12, padding: "6px 14px" }}>↻ Actualizar</Btn>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {puedeGestionar && <Btn onClick={abrirNuevo}>+ Nuevo plato</Btn>}
+          <Btn variant="ghost" onClick={onRefresh} style={{ fontSize: 12, padding: "6px 14px" }}>↻ Actualizar</Btn>
+        </div>
       </div>
 
       {cats.map(cat => (
@@ -559,7 +635,7 @@ function TabMenu({ menu, onRefresh }) {
               <Card key={p.id_plato} style={{ padding: "14px 18px" }}>
                 <div style={{ display: "flex", gap: 14, marginBottom: 10, alignItems: "flex-start" }}>
                   <img
-                    src={imagenesPlatos[p.id_plato] || "/img/1.png"}
+                    src={p.imagen_url || imagenesPlatos[p.id_plato] || "/img/1.png"}
                     alt={p.nombre}
                     style={{ width: 96, height: 96, objectFit: "cover", borderRadius: 12, flexShrink: 0 }}
                   />
@@ -576,6 +652,16 @@ function TabMenu({ menu, onRefresh }) {
                     </span>
                   </div>
                 </div>
+                {puedeGestionar && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                    <Btn variant="ghost" onClick={() => abrirEditar(p)} style={{ padding: "6px 10px", fontSize: 12 }}>
+                      Editar
+                    </Btn>
+                    <Btn variant="danger" onClick={() => eliminar(p.id_plato)} style={{ padding: "6px 10px", fontSize: 12 }}>
+                      Borrar
+                    </Btn>
+                  </div>
+                )}
               </Card>
             ))}
           </div>
@@ -586,6 +672,61 @@ function TabMenu({ menu, onRefresh }) {
         <Card style={{ textAlign: "center", padding: 40 }}>
           <p style={{ color: C.muted }}>No hay platos registrados en el menú activo</p>
         </Card>
+      )}
+
+      {modal && (
+        <Modal title={form.id_plato ? "Editar plato" : "Agregar plato"} onClose={() => { setModal(false); setError(""); }}>
+          <Input
+            label="Nombre"
+            value={form.nombre}
+            onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+          />
+          <Input
+            label="Descripción"
+            value={form.descripcion}
+            onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))}
+          />
+          <Input
+            label="Precio"
+            type="number" min="0" step="0.01"
+            value={form.precio}
+            onChange={e => setForm(f => ({ ...f, precio: e.target.value }))}
+          />
+          <Input
+            label="Imagen (URL)"
+            type="text"
+            placeholder="https://..."
+            value={form.imagen_url}
+            onChange={e => setForm(f => ({ ...f, imagen_url: e.target.value }))}
+          />
+          <label style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, fontSize: 12, color: C.muted }}>
+            <input
+              type="checkbox"
+              checked={form.disponible}
+              onChange={e => setForm(f => ({ ...f, disponible: e.target.checked }))}
+            />
+            Disponible
+          </label>
+          {form.imagen_url && (
+            <div style={{ marginBottom: 14 }}>
+              <Label>Previsualización</Label>
+              <img src={form.imagen_url} alt="Previsualización" style={{ width: "100%", maxHeight: 180, objectFit: "cover", borderRadius: 12, border: `1px solid ${C.border}` }} />
+            </div>
+          )}
+          {error && (
+            <div style={{
+              background: C.danger + "22", border: `1px solid ${C.danger}44`,
+              borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.danger, marginBottom: 14,
+            }}>{error}</div>
+          )}
+          <Btn onClick={guardar} disabled={guardando} style={{ width: "100%", justifyContent: "center" }}>
+            {guardando ? <><Spinner /> Guardando…</> : form.id_plato ? "Guardar cambios" : "Crear plato"}
+          </Btn>
+          <Btn variant="ghost" onClick={() => { setModal(false); setError(""); }}
+            style={{ width: "100%", justifyContent: "center", marginTop: 10, fontSize: 13 }}>
+            Cancelar
+          </Btn>
+        </Modal>
       )}
     </div>
   );
@@ -771,16 +912,19 @@ export default function AdminPage() {
   const [inventario, setInventario] = useState([]);
   const [facturas, setFacturas] = useState([]);
   const [reservas, setReservas] = useState([]);
+  const [sedes, setSedes] = useState([]);
+  const [idSede, setIdSede] = useState("");
   const [cargando, setCargando] = useState(true);
+  const isMultiSedeAdmin = ["super_admin", "admin_general"].includes(user?.rol);
 
   const cargarDatos = useCallback(async () => {
     try {
       const [m, p, mn, inv, f, r] = await Promise.all([
-        api.getMesas(),
-        api.getPedidos(),
-        api.getMenu(),
-        api.getInventario(),
-        api.getFacturas(),
+        api.getMesas(idSede || undefined),
+        api.getPedidos(idSede || undefined),
+        api.getMenu(idSede || undefined),
+        api.getInventario(idSede || undefined),
+        api.getFacturas(idSede || undefined),
         api.getReservas(),
       ]);
       setMesas(m);
@@ -794,13 +938,20 @@ export default function AdminPage() {
     } finally {
       setCargando(false);
     }
-  }, []);
+  }, [idSede]);
 
   useEffect(() => {
     cargarDatos();
     const interval = setInterval(cargarDatos, 30000);
     return () => clearInterval(interval);
   }, [cargarDatos]);
+
+  useEffect(() => {
+    if (!isMultiSedeAdmin) return;
+    api.getSedes()
+      .then(setSedes)
+      .catch(err => console.error("Error cargando sedes:", err));
+  }, [isMultiSedeAdmin]);
 
   if (cargando) return (
     <>
@@ -820,11 +971,26 @@ export default function AdminPage() {
       <div style={{ minHeight: "100vh", background: C.bg }}>
         <Topbar user={user} logout={logout} tab={tab} setTab={setTab} />
         <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>
+          {isMultiSedeAdmin && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end", marginBottom: 20 }}>
+              <div style={{ minWidth: 260, flex: "1 1 auto" }}>
+                <Select label="Filtrar por sede" value={idSede} onChange={e => setIdSede(e.target.value)}>
+                  <option value="">Todas las sedes</option>
+                  {sedes.map(s => (
+                    <option key={s.id_sede} value={s.id_sede}>{s.nombre}</option>
+                  ))}
+                </Select>
+              </div>
+              <Btn variant="ghost" onClick={() => setIdSede("")} style={{ whiteSpace: "nowrap" }}>
+                Limpiar filtro
+              </Btn>
+            </div>
+          )}
           {tab === "resumen" && <TabResumen mesas={mesas} pedidos={pedidos} inventario={inventario} facturas={facturas} />}
           {tab === "mesas" && <TabMesas mesas={mesas} pedidos={pedidos} onRefresh={cargarDatos} />}
           {tab === "pedidos" && <TabPedidos pedidos={pedidos} onRefresh={cargarDatos} />}
           {tab === "facturacion" && <TabFacturacion pedidos={pedidos} facturas={facturas} onRefresh={cargarDatos} />}
-          {tab === "menu" && <TabMenu menu={menu} onRefresh={cargarDatos} />}
+          {tab === "menu" && <TabMenu menu={menu} onRefresh={cargarDatos} idSede={idSede} />}
           {tab === "inventario" && <TabInventario inventario={inventario} onRefresh={cargarDatos} />}
           {tab === "reservas" && <TabReservas esAdmin={true} />}
         </div>

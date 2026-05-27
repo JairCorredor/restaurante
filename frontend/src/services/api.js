@@ -40,20 +40,23 @@ const api = {
   actualizarMesa:  (id, data)   => request("PUT",  `/mesas/${id}`, data),
 
   // ── Pedidos ───────────────────────────────────────────────
-  getPedidos:      ()           => request("GET",  "/pedidos"),
+  getPedidos:      (id_sede)    => request("GET",  id_sede ? `/pedidos?id_sede=${id_sede}` : "/pedidos"),
   crearPedido:     (data)       => request("POST", "/pedidos", data),
   actualizarEstado:(id, estado) => request("PUT",  `/pedidos/${id}/estado`, { estado }),
 
   // ── Menú ──────────────────────────────────────────────────
-  getMenu:    ()   => request("GET", "/menu"),
-  getReceta:  (id) => request("GET", `/menu/${id}/receta`),
+  getMenu:         (id_sede) => request("GET", id_sede ? `/menu?id_sede=${id_sede}` : "/menu"),
+  crearMenu:       (data)    => request("POST", "/menu", data),
+  actualizarMenu:  (id, data)=> request("PUT", `/menu/${id}`, data),
+  eliminarMenu:    (id)      => request("DELETE", `/menu/${id}`),
+  getReceta:       (id)      => request("GET", `/menu/${id}/receta`),
 
   // ── Inventario ────────────────────────────────────────────
-  getInventario:     ()         => request("GET", "/inventario"),
+  getInventario:     (id_sede) => request("GET", id_sede ? `/inventario?id_sede=${id_sede}` : "/inventario"),
   actualizarProducto:(id, data) => request("PUT", `/inventario/${id}`, data),
 
   // ── Facturas ──────────────────────────────────────────────
-  getFacturas:  ()     => request("GET",  "/facturas"),
+  getFacturas:  (id_sede) => request("GET",  id_sede ? `/facturas?id_sede=${id_sede}` : "/facturas"),
   getMisFacturas: ()    => request("GET",  "/facturas/mis-facturas"),
   crearFactura: (data) => request("POST", "/facturas", data),
 

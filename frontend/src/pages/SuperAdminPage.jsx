@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import MiniCalendar from "../components/shared/MiniCalendarComponent";
+import RHpage from "./RHpage";
+import AdminPage from "./AdminPage";
 
 // ── Estilos ────────────────────────────────────────────────────────
 const C = {
@@ -67,11 +69,11 @@ const Spinner = ({ size = 14 }) => (
 
 // ── TOPBAR ────────────────────────────────────────────────────────────
 const TABS = [
-  { id: "dashboard", icon: "📊", label: "Dashboard" },
   { id: "sedes", icon: "🏢", label: "Sedes" },
   { id: "finanzas", icon: "💰", label: "Finanzas Global" },
   { id: "usuarios", icon: "👥", label: "Usuarios" },
-  { id: "reportes", icon: "📈", label: "Reportes" },
+  { id: "admin_punto", icon: "🏪", label: "Admin Punto" },
+  { id: "rh", icon: "👥", label: "RRHH" },
 ];
 
 function Topbar({ user, logout, tab, setTab }) {
@@ -604,15 +606,15 @@ function TabReportes() {
 // ── MAIN COMPONENT ─────────────────────────────────────────────────────
 export default function SuperAdminPage() {
   const { user, logout } = useAuth();
-  const [tab, setTab] = useState("dashboard");
+  const [tab, setTab] = useState("rh");
 
   const renderTab = () => {
     switch (tab) {
-      case "dashboard": return <TabDashboard user={user} />;
       case "sedes": return <TabSedes />;
       case "finanzas": return <TabFinanzas />;
       case "usuarios": return <TabUsuarios />;
-      case "reportes": return <TabReportes />;
+      case "admin_punto": return <AdminPage />;
+      case "rh": return <RHpage />;
       default: return null;
     }
   };

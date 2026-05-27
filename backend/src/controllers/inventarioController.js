@@ -2,10 +2,14 @@ const db = require("../config/db");
 
 // GET /api/inventario
 async function getInventario(req, res) {
-  const id_sede = req.usuario.id_sede;
+  const querySede = Number(req.query.id_sede);
+  const canFilterSede = ["super_admin", "admin_general"].includes(req.usuario.rol);
+  const id_sede = (canFilterSede && !isNaN(querySede) && querySede > 0)
+    ? querySede
+    : req.usuario.id_sede;
+
   try {
-    const [rows] = await db.query(
-      `SELECT p.id_producto, p.nombre, p.descripcion, p.unidad_medida,
+    let sql = `SELECT p.id_producto, p.nombre, p.descripcion, p.unidad_medida,
               p.cantidad_actual, p.cantidad_minima, p.fecha_vencimiento,
               p.precio_unitario, c.nombre AS categoria,
               pr.nombre AS proveedor,
@@ -18,10 +22,16 @@ async function getInventario(req, res) {
        FROM productos_inventario p
        JOIN categorias_producto c  ON c.id_categoria = p.id_categoria
        LEFT JOIN proveedores pr    ON pr.id_proveedor = p.id_proveedor
-       WHERE p.id_sede = ?
-       ORDER BY alerta DESC, p.nombre`,
-      [id_sede]
-    );
+       WHERE 1 = 1`;
+    const params = [];
+
+    if (id_sede) {
+      sql += ` AND p.id_sede = ?`;
+      params.push(id_sede);
+    }
+
+    sql += ` ORDER BY alerta DESC, p.nombre`;
+    const [rows] = await db.query(sql, params);
     return res.json(rows);
   } catch (err) {
     console.error(err);

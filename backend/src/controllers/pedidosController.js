@@ -37,9 +37,13 @@ function extractIngredientesExcluir(item) {
 
 // GET /api/pedidos
 async function getPedidos(req, res) {
-  const id_sede = req.usuario?.id_sede;
-  const esSuperAdmin = req.usuario?.rol === "super_admin";
-  
+  const userSede = req.usuario?.id_sede;
+  const querySede = Number(req.query.id_sede);
+  const canFilterSede = ["super_admin", "admin_general"].includes(req.usuario?.rol);
+  const id_sede = (canFilterSede && !isNaN(querySede) && querySede > 0)
+    ? querySede
+    : userSede;
+
   try {
     let query = `SELECT p.id_pedido, p.id_mesa, p.id_sede, p.estado, p.observacion, p.creado_en,
               m.numero AS mesa_numero,
@@ -51,9 +55,9 @@ async function getPedidos(req, res) {
        LEFT JOIN usuarios u ON u.id_usuario = e.id_usuario
        LEFT JOIN sedes s ON s.id_sede = p.id_sede
        WHERE 1=1`;
-    
+
     let params = [];
-    if (!esSuperAdmin && id_sede) {
+    if (id_sede) {
       query += ` AND p.id_sede = ?`;
       params = [id_sede];
     }

@@ -4,21 +4,22 @@ const db = require("../config/db");
 // super_admin ve todas; admin_punto ve solo su sede
 // Query params opcionales: ?desde=YYYY-MM-DD&hasta=YYYY-MM-DD | ?mes=M&año=YYYY | ?id_sede=N
 async function getFacturas(req, res) {
-  const id_sede      = req.usuario?.id_sede;
-  const esSuperAdmin = req.usuario?.rol === "super_admin";
+  const userSede = req.usuario?.id_sede;
+  const canFilterSede = ["super_admin", "admin_general"].includes(req.usuario?.rol);
   const { desde, hasta, mes, año, id_sede: sedeParam } = req.query;
+  const sedeNumber = Number(sedeParam);
 
   try {
     let condiciones = [];
     let params      = [];
 
-    // Filtro por sede: super_admin puede pasar ?id_sede, otros ven solo la suya
-    if (!esSuperAdmin && id_sede) {
+    // Filtro por sede: super_admin/admin_general puede pasar ?id_sede, otros ven solo la suya
+    if (!canFilterSede && userSede) {
       condiciones.push("f.id_sede = ?");
-      params.push(id_sede);
-    } else if (esSuperAdmin && sedeParam) {
+      params.push(userSede);
+    } else if (canFilterSede && !isNaN(sedeNumber) && sedeNumber > 0) {
       condiciones.push("f.id_sede = ?");
-      params.push(Number(sedeParam));
+      params.push(sedeNumber);
     }
 
     // Filtro por fecha — desde/hasta tiene prioridad sobre mes/año

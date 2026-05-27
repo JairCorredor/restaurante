@@ -60,14 +60,14 @@ export const useAuth = () => useContext(AuthContext);
 export const PERMISOS = {
   verProveedores: ["admin_general", "super_admin"],
   verSalarios: ["admin_general", "super_admin"],
-  verMemorandos: ["admin_general", "super_admin", "admin_punto"],
+  verMemorandos: ["admin_general", "super_admin"],
   verFinanzasGlobales: ["super_admin"],
   verFinanzasSede: ["admin_general", "super_admin", "inversionista"],
   verIVA: ["admin_general", "super_admin"],
   verPropinas: ["admin_general", "super_admin"],
   verTotalIngresos: ["admin_general", "super_admin", "inversionista"],
   verEgresos: ["admin_general", "super_admin", "inversionista"],
-  verLicencias: ["admin_general", "super_admin", "admin_punto"],
+  verLicencias: ["admin_general", "super_admin"],
   verEmpleados: ["admin_general", "super_admin"],
   generarFactura: ["admin_punto", "super_admin", "admin_general"],
   verResumenPagos: ["admin_punto", "admin_general", "super_admin"],
@@ -78,7 +78,7 @@ export const PERMISOS = {
   verMisPedidos: ["mesero", "super_admin"],
   verReservas: ["cliente", "admin_punto", "admin_general", "super_admin"],
   responderEncuesta: ["cliente"],
-  verEncuestas: ["admin_punto", "admin_general", "super_admin"],
+  verEncuestas: ["admin_general", "super_admin"],
 };
 
 export function usePuede() {
